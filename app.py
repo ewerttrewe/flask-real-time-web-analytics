@@ -1,12 +1,12 @@
 from flask import Flask
 from flask_restful import Api
-from users import UsersRegistrationView
+from .users import UsersRegistrationView
+from dotenv import load_dotenv
 
-# from flask_bcrypt import Bcrypt
 
+load_dotenv()
 app = Flask(__name__)
 api = Api(app)
-# flask_bcrypt = Bcrypt(api)
 
 
 api.add_resource(UsersRegistrationView, "/api/users/registration")
