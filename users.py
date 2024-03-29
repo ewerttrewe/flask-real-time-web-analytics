@@ -22,7 +22,7 @@ class UsersRegistrationView(Resource):
             if is_correct_url(data["registered_site"]):
                 email = data["email"]
                 registered_site = data["registered_site"]
-                access_token = create_access_token(identity=email)
+                access_token = create_access_token(identity=email, expires_delta=False)
                 #connecting to db
                 cnx = mysql.connector.connect(
                     user=os.getenv("USER"),
@@ -48,3 +48,11 @@ class UsersRegistrationView(Resource):
                 return "please provide correct url address"
         except Exception as e:
             return jsonify({"msg":"something went wrong!", "error":str(e)})
+        
+
+class UserProtectedView(Resource):
+    @jwt_required(locations="headers", refresh=False)
+    def get(self):
+        user_identity = get_jwt_identity()
+
+        return jsonify({"msg":"success","user":user_identity})
