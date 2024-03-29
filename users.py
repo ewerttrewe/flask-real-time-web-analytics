@@ -19,11 +19,10 @@ class UsersRegistrationView(Resource):
         # asigining data
         try:
             data = request.get_json()
-            print(data)
             if is_correct_url(data["registered_site"]):
                 email = data["email"]
                 registered_site = data["registered_site"]
-                
+                access_token = create_access_token(identity=email)
                 #connecting to db
                 cnx = mysql.connector.connect(
                     user=os.getenv("USER"),
@@ -31,21 +30,21 @@ class UsersRegistrationView(Resource):
                     host=os.getenv("HOST"),
                     database=os.getenv("DATABASE"),
                 )
-                print(cnx.is_connected())
                 #opening cursor & executing query & commit to db
                 cursor = cnx.cursor()
                 cursor.execute(
-                    "INSERT INTO users" "(email, registered_site)" "VALUES(%s, %s)",
+                    "INSERT INTO users" "(email, registered_site, access_token)" "VALUES(%s, %s, %s)",
                     (
                         email,
                         registered_site,
+                        access_token
                     ),
                 )
                 cnx.commit()
                 cursor.close()
                 cnx.close()
-                return "data posted to db" 
+                return jsonify({"msg":"data posted to db", "access_token":access_token}) 
             else:
                 return "please provide correct url address"
         except Exception as e:
-            return jsonify({"something went wrong!":str(e)})
+            return jsonify({"msg":"something went wrong!", "error":str(e)})
