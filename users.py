@@ -13,26 +13,25 @@ from flask import jsonify
 load_dotenv()
 
 
-class UsersRegistrationView(Resource):
+class CreateUserView(Resource):
     def post(self):
-        # asigining data
         try:
             data = request.get_json()
             if is_correct_url(data["site_address"]):
                 email = data["email"]
                 site_address = data["site_address"]
                 access_token = create_access_token(identity=email, expires_delta=False)
-                #connecting to db
                 cnx = init_connection_db()
-                #opening cursor & executing query & commit to db
                 cursor = cnx.cursor()
                 cursor.execute(
-                    "INSERT INTO rtwa_db.users" "(email, access_token)" "VALUES(%s, %s)",
+                    "INSERT INTO rtwa_db.users" "(email, access_token, site_address)" "VALUES(%s, %s, %s)",
                     (
                         email,
-                        access_token
+                        access_token,
+                        site_address
                     )
                 )
+                
                 cursor.execute(
                     "SELECT site_address FROM rtwa_db.sites WHERE site_address=%s",
                     (
@@ -40,14 +39,37 @@ class UsersRegistrationView(Resource):
                     )
                 )
                 cursor.fetchone()
+
                 does_exists = cursor.rowcount
-                print(does_exists)
                 if not does_exists:
-                
                     cursor.execute(
-                        "INSERT INTO sites" "(site_address)" "VALUES(%s)",
+                        "INSERT INTO rtwa_db.sites" "(site_address)" "VALUES(%s)",
                         (
                             site_address,
+                        )
+                    )
+                
+                cursor.execute(
+                    "SELECT id_users FROM rtwa_db.users WHERE access_token=%s",
+                    (
+                        access_token,
+                    )
+                )
+                user_id = cursor.fetchone()[0]
+
+                cursor.execute(
+                    "SELECT id_sites FROM rtwa_db.sites WHERE site_address=%s",
+                    (
+                        site_address,
+                    )
+                )
+                site_id = cursor.fetchone()[0]
+
+                cursor.execute(
+                        "INSERT INTO rtwa_db.users_sites" "(id_users, id_sites)" "VALUES(%s, %s)",
+                        (
+                            user_id,
+                            site_id,
                         )
                     )
                 cnx.commit()
@@ -60,25 +82,56 @@ class UsersRegistrationView(Resource):
             return jsonify({"msg":"something went wrong!", "error":str(e)})
         
 
-class UserProtectedView(Resource):
-    @jwt_required(locations="headers", refresh=False)
+class CreateEntryView(Resource):
     def post(self):
         try:
-            user_identity = get_jwt_identity()
-            # cnx = init_connection_db()
-            # cursor = cnx.cursor()
+            data = request.get_json()
+            page_url = data["page_url"] 
+            ua_header = data["user_agent_header_value"]
+            r_header = data["referer_header_value"]
+            window_width = data["window_inner_width"]
+            window_height = data["window_inner_height"]
+            max_touchpoints = data["navigator_max_touchpoints"]
+            language = data["navigator_language"]
 
+            cnx = init_connection_db()
+            cursor = cnx.cursor()
+            cursor.execute(
+                "SELECT id_sites FROM rtwa_db.sites WHERE site_address=%s",
+                (
+                    page_url,
+                )
+            )
+            site_id = cursor.fetchone()
+            does_exist = cursor.rowcount
+            if not does_exist:
+                cursor.close()
+                cnx.close()
+                return jsonify({"msg":"Data ignored, site not registered for tracking!"})
+            else:
+                cursor.execute(
+                    "INSERT INTO rtwa_db.entries (id_site, ua_header, referer_header, language, max_touchpoints, window_height, window_width) VALUES(%s,%s,%s,%s,%s,%s, %s)",
+                    (
+                        site_id[0],
+                        ua_header,
+                        r_header,
+                        language,
+                        max_touchpoints,
+                        window_height,
+                        window_width,
+                    )
+                )
+                cnx.commit()
+                cursor.close()
+                cnx.close()
+                return jsonify({"msg":"success, data posted to db!"})
         
-
-        # data = request.get_json()
-        # page_url = data["page_url"] 
-        # ua_header = data["user_agent_header_value"]
-        # r_header = data["referer_header_value"]
-        # window_inner_width = data["window_inner_width"]
-        # window_inner_height = data["window_inner_height"]
-        # nav_max_touch_points = data["navigator_max_touch_points"]
-        # nav_language = data["navigator_language"]
-
-            return jsonify({"msg":"success","user":user_identity})
         except Exception as e:
             return jsonify({"msg":"something went wrong!", "error":str(e)})
+        
+
+class ListUsersSiteStatView(Resource):
+    @jwt_required(locations="headers", refresh=False)
+    def get(self):
+        user_identity = get_jwt_identity()
+        return jsonify({"user":user_identity})
