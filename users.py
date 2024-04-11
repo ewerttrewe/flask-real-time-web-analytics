@@ -1,6 +1,7 @@
 #app imports
 from .utils import is_correct_url, init_connection_db
 #standard imports
+import json
 from dotenv import load_dotenv
 from requests import status_codes, Response
 #3rd party imports
@@ -110,9 +111,10 @@ class CreateEntryView(Resource):
                 return jsonify({"msg":"Data ignored, site not registered for tracking!"})
             else:
                 cursor.execute(
-                    "INSERT INTO rtwa_db.entries (id_site, ua_header, referer_header, language, max_touchpoints, window_height, window_width) VALUES(%s,%s,%s,%s,%s,%s, %s)",
+                    "INSERT INTO rtwa_db.entries (id_site, page_url, ua_header, referer_header, language, max_touchpoints, window_height, window_width) VALUES(%s,%s,%s,%s,%s,%s,%s,%s)",
                     (
                         site_id[0],
+                        page_url,
                         ua_header,
                         r_header,
                         language,
@@ -136,13 +138,24 @@ class ListUsersSitesStatView(Resource):
         try:    
             user_identity = get_jwt_identity()
             cnx = init_connection_db()
-            cursor = cnx.cursor()
-
-            # rest of the code
-
+            cursor = cnx.cursor(dictionary=True)
+            cursor.execute(
+                "SELECT site_address FROM rtwa_db.users WHERE email=%s",
+                (
+                    user_identity,
+                )
+            )
+            site_address = cursor.fetchone()["site_address"]
+            cursor.execute(
+                "SELECT s.site_address, e.page_url, e.ua_header, e.referer_header FROM rtwa_db.sites AS s INNER JOIN rtwa_db.entries AS e ON s.id_sites = e.id_site WHERE s.site_address =%s",
+                (
+                    site_address,
+                )
+            )
+            results = cursor.fetchall()
             cnx.commit()
             cursor.close()
             cnx.close()
-            return jsonify({"user":user_identity})
+            return jsonify({"user":user_identity, "wynik":results})
         except Exception as e:
             return jsonify({"msg":"something went wrong!", "error":str(e)})
