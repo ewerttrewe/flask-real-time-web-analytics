@@ -28,7 +28,7 @@ class CreateUserView(Resource):
                     (
                         email,
                         access_token,
-                        site_address
+                        site_address,
                     )
                 )
                 
@@ -130,8 +130,19 @@ class CreateEntryView(Resource):
             return jsonify({"msg":"something went wrong!", "error":str(e)})
         
 
-class ListUsersSiteStatView(Resource):
+class ListUsersSitesStatView(Resource):
     @jwt_required(locations="headers", refresh=False)
     def get(self):
-        user_identity = get_jwt_identity()
-        return jsonify({"user":user_identity})
+        try:    
+            user_identity = get_jwt_identity()
+            cnx = init_connection_db()
+            cursor = cnx.cursor()
+
+            # rest of the code
+
+            cnx.commit()
+            cursor.close()
+            cnx.close()
+            return jsonify({"user":user_identity})
+        except Exception as e:
+            return jsonify({"msg":"something went wrong!", "error":str(e)})
