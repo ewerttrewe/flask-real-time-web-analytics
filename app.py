@@ -6,7 +6,7 @@ from flask import Flask
 from flask_restful import Api
 from flask_jwt_extended import JWTManager
 #app imports
-from .users import UsersRegistrationView, UserProtectedView
+from .users import CreateUserView, CreateEntryView, ListUsersSitesStatView
 
 
 
@@ -21,8 +21,9 @@ jwt = JWTManager(app)
 
 api = Api(app)
 
-api.add_resource(UserProtectedView, "/api/users/protected")
-api.add_resource(UsersRegistrationView, "/api/users/registration")
+api.add_resource(CreateEntryView, "/v1/api/entry/create")
+api.add_resource(CreateUserView, "/v1/api/users/registration")
+api.add_resource(ListUsersSitesStatView, "/v1/api/users/site-stats")
 
 if __name__ == "__main__":
     app.run(debug=True)
