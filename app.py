@@ -1,13 +1,14 @@
-#standard imports
+# standard imports
 from dotenv import load_dotenv
 import os
-#3rd party imports
+
+# 3rd party imports
 from flask import Flask
 from flask_restful import Api
 from flask_jwt_extended import JWTManager
-#app imports
-from .users import CreateUserView, CreateEntryView, ListUsersSitesStatView
 
+# app imports
+from .users import CreateUserView, CreateEntryView, ListUsersSitesStatView, HelloWorld
 
 
 load_dotenv()
@@ -24,6 +25,7 @@ api = Api(app)
 api.add_resource(CreateEntryView, "/v1/api/entry/create")
 api.add_resource(CreateUserView, "/v1/api/users/registration")
 api.add_resource(ListUsersSitesStatView, "/v1/api/users/site-stats")
+api.add_resource(HelloWorld, "/v1/api/hello")
 
 if __name__ == "__main__":
     app.run(debug=True)
