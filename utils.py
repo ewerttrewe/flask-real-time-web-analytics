@@ -16,17 +16,18 @@ def init_connection_db():
             user=os.getenv("MYSQL_USER"),
             password=os.getenv("MYSQL_ROOT_PASSWORD"),
             host=os.getenv("MYSQL_HOST"),
-            database=os.getenv("MYSQL_DATABASE"),
+            # database=os.getenv("MYSQL_DATABASE"),
         )
         if connection_to_db.is_connected():
             print("MySQL connection established.")
             return connection_to_db
     except Error as e:
-        return "msg", "Cannot connect to db!", e
+        return "Cannot connect to db!", e
 
 
 def create_schema_and_tables(cnx):
     try:
+        print(cnx)
         cursor = cnx.cursor()
 
         # Create schema
@@ -43,7 +44,7 @@ def create_schema_and_tables(cnx):
         users_table = """
             CREATE TABLE IF NOT EXISTS users (
                 id_users INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
-                email VARCHAR(255) NOT NULL,
+                email VARCHAR(255) UNIQUE NOT NULL,
                 access_token TEXT NOT NULL,
                 site_address VARCHAR(255) NOT NULL
             )
@@ -97,5 +98,6 @@ def create_schema_and_tables(cnx):
         cursor.execute(entries_table)
         cnx.commit()
         print("Setting up database successfull!.")
+        return cursor
     except Error as e:
         print(f"Error creating schema and tables: {e}")

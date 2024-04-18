@@ -34,7 +34,9 @@ class CreateUserView(Resource):
                 access_token = create_access_token(identity=email, expires_delta=False)
 
                 cnx = init_connection_db()
+
                 create_schema_and_tables(cnx)
+
                 cursor = cnx.cursor()
                 cursor.execute(
                     "INSERT INTO rtwa_users.users"
