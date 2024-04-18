@@ -1,5 +1,5 @@
 # app imports
-from .utils import is_correct_url, init_connection_db
+from .utils import is_correct_url, init_connection_db, create_schema_and_tables
 
 # standard imports
 import json
@@ -32,7 +32,9 @@ class CreateUserView(Resource):
                 email = data["email"]
                 site_address = data["site_address"]
                 access_token = create_access_token(identity=email, expires_delta=False)
+
                 cnx = init_connection_db()
+                create_schema_and_tables(cnx)
                 cursor = cnx.cursor()
                 cursor.execute(
                     "INSERT INTO rtwa_users.users"
