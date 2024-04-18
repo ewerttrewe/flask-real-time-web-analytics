@@ -1,25 +1,30 @@
-name: real-time-web-analytics-app
+version: '3.8'
 
 services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "5000:5000"
-    env_file:
-      - .env
-    depends_on:
-      - mysql_db
-
-  mysql_db:
-    image: mysql:latest
+  db:
+    image: mysql:8.0
+    volumes:
+      - mysql_data:/var/lib/mysql
+    restart: always
     environment:
-    - MYSQL_ROOT_PASSWORD=$(MYSQL_ROOT_PASSWORD)
-    - MYSQL_DATABASE=$(MYSQL_DATABASE)
-    - MYSQL_USER=$(MYSQL_USER)
-    - MYSQL_PASSWORD=$(MYSQL_ROOT_PASSWORD)
+      MYSQL_ROOT_PASSWORD: Ewert961124.
+      MYSQL_DATABASE: rtwa_users
+      MYSQL_USER: ewerttrewe
+      MYSQL_PASSWORD: Ewert961124.
     ports:
       - "3306:3306"
 
+  flaskapp:
+    build: .
+    ports:
+      - "5000:5000"
+    depends_on:
+      - db
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_RUN_HOST=0.0.0.0
+    volumes:
+      - .:/app
 
+volumes:
+  mysql_data:
