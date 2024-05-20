@@ -27,7 +27,6 @@ def init_connection_db():
 
 def create_schema_and_tables(cnx):
     try:
-        print(cnx)
         cursor = cnx.cursor()
 
         # Create schema

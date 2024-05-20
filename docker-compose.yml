@@ -7,10 +7,10 @@ services:
       - mysql_data:/var/lib/mysql
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: Ewert961124.
-      MYSQL_DATABASE: rtwa_users
-      MYSQL_USER: ewerttrewe
-      MYSQL_PASSWORD: Ewert961124.
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
       - "3306:3306"
 
@@ -20,11 +20,25 @@ services:
       - "5000:5000"
     depends_on:
       - db
+      - redis
     environment:
       - FLASK_APP=app.py
       - FLASK_RUN_HOST=0.0.0.0
     volumes:
       - .:/app
+  
+  redis:
+    image: redis/redis-stack:latest
+    restart: always
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+      - "8001:8001"
+      
+
 
 volumes:
   mysql_data:
+  redis-data:
+

@@ -1,9 +1,11 @@
 # app imports
 from .utils import is_correct_url, init_connection_db, create_schema_and_tables
 
+
 # standard imports
-import json
 from dotenv import load_dotenv
+import os
+import json
 
 # 3rd party imports
 from flask_restful import Resource
@@ -14,14 +16,34 @@ from flask_jwt_extended import (
 )
 from flask import request
 from flask import jsonify
-
+from redis import Redis
 
 load_dotenv()
 
 
+redis = Redis(
+    host=os.getenv("REDIS_HOST"), port=os.getenv("REDIS_PORT"), decode_responses=True
+)
+
+
 class HelloWorld(Resource):
     def get(self):
-        return {"hello": "world"}
+        try:
+            redis.ping()
+            redis.set("imie", "maciek")
+            print("success, redis connected!, random key created")
+        except Exception as e:
+            print(f"Error connecting to redis: {e}")
+
+        redis.incr("hits")
+        counter = str(redis.get("hits"), "utf-8")
+        ki = str(redis.get("imie"), "utf-8")
+        return (
+            "Welcome to this webapage!, This webpage has been viewed "
+            + counter
+            + " time(s)"
+            + ki
+        )
 
 
 class CreateUserView(Resource):
@@ -149,21 +171,30 @@ class ListUsersSitesStatView(Resource):
     def get(self):
         try:
             user_identity = get_jwt_identity()
-            cnx = init_connection_db()
-            cursor = cnx.cursor(dictionary=True)
-            cursor.execute(
-                "SELECT site_address FROM rtwa_users.users WHERE email=%s",
-                (user_identity,),
-            )
-            site_address = cursor.fetchone()["site_address"]
-            cursor.execute(
-                "SELECT s.site_address, e.page_url, e.ua_header, e.referer_header FROM rtwa_users.sites AS s INNER JOIN rtwa_users.entries AS e ON s.id_sites = e.id_site WHERE s.site_address =%s",
-                (site_address,),
-            )
-            results = cursor.fetchall()
-            cnx.commit()
-            cursor.close()
-            cnx.close()
-            return jsonify({"user": user_identity, "wynik": results})
+            if redis.keys(f"{user_identity}"):
+                results = redis.json().get(f"{user_identity}", "$")
+                print("Loading data from cache!...")
+                return jsonify({"user": user_identity, "result": (results)})
+
+            else:
+                cnx = init_connection_db()
+                cursor = cnx.cursor(dictionary=True)
+                cursor.execute(
+                    "SELECT site_address FROM rtwa_users.users WHERE email=%s",
+                    (user_identity,),
+                )
+                site_address = cursor.fetchone()["site_address"]
+                cursor.execute(
+                    "SELECT s.site_address, e.page_url, e.ua_header, e.referer_header FROM rtwa_users.sites AS s INNER JOIN rtwa_users.entries AS e ON s.id_sites = e.id_site WHERE s.site_address =%s",
+                    (site_address,),
+                )
+                results = cursor.fetchall()
+                redis.json().set(user_identity, "$", results)
+                print("Data cached to redis!")
+                cnx.commit()
+                cursor.close()
+                cnx.close()
+
+                return jsonify({"user": user_identity, "result": results})
         except Exception as e:
             return jsonify({"msg": "something went wrong!", "error": str(e)})

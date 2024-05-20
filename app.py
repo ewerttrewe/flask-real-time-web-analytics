@@ -6,6 +6,7 @@ import os
 from flask import Flask
 from flask_restful import Api
 from flask_jwt_extended import JWTManager
+from redis import Redis
 
 # app imports
 from .users import CreateUserView, CreateEntryView, ListUsersSitesStatView, HelloWorld
@@ -22,6 +23,7 @@ jwt = JWTManager(app)
 
 
 api = Api(app)
+
 
 api.add_resource(CreateEntryView, "/v1/api/entry/create")
 api.add_resource(CreateUserView, "/v1/api/users/registration")
