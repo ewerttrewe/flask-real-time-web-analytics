@@ -1,6 +1,9 @@
 # app imports
-from .utils import is_correct_url, init_connection_db, create_schema_and_tables
-
+from .utils import (
+    is_correct_url,
+    init_connection_db,
+    create_schema_and_tables,
+)
 
 # standard imports
 from dotenv import load_dotenv
@@ -17,33 +20,34 @@ from flask_jwt_extended import (
 from flask import request
 from flask import jsonify
 from redis import Redis
-
-load_dotenv()
+from redis.exceptions import ConnectionError, TimeoutError
+from redis.retry import Retry
+from redis.backoff import ExponentialBackoff
 
 
 redis = Redis(
-    host=os.getenv("REDIS_HOST"), port=os.getenv("REDIS_PORT"), decode_responses=True
+    host=os.getenv("REDIS_HOST"),
+    port=os.getenv("REDIS_PORT"),
+    decode_responses=True,
+    health_check_interval=5,
+    retry=Retry(ExponentialBackoff(cap=10, base=1), 25),
+    retry_on_error=[ConnectionError, TimeoutError, ConnectionResetError],
 )
+
+load_dotenv()
 
 
 class HelloWorld(Resource):
     def get(self):
         try:
-            redis.ping()
+            print(redis.ping())
             redis.set("imie", "maciek")
             print("success, redis connected!, random key created")
         except Exception as e:
             print(f"Error connecting to redis: {e}")
 
-        redis.incr("hits")
-        counter = str(redis.get("hits"), "utf-8")
-        ki = str(redis.get("imie"), "utf-8")
-        return (
-            "Welcome to this webapage!, This webpage has been viewed "
-            + counter
-            + " time(s)"
-            + ki
-        )
+        ki = redis.get("imie")
+        return "Welcome to this webapage!" + ki
 
 
 class CreateUserView(Resource):
@@ -143,6 +147,7 @@ class CreateEntryView(Resource):
                 return jsonify(
                     {"msg": "Data ignored, site not registered for tracking!"}
                 )
+
             else:
                 cursor.execute(
                     "INSERT INTO rtwa_users.entries (id_site, page_url, ua_header, referer_header, language, max_touchpoints, window_height, window_width) VALUES(%s,%s,%s,%s,%s,%s,%s,%s)",
@@ -157,9 +162,17 @@ class CreateEntryView(Resource):
                         window_width,
                     ),
                 )
+
                 cnx.commit()
                 cursor.close()
                 cnx.close()
+
+                hashed_keys = redis.keys("*")
+                for hk in hashed_keys:
+                    if redis.hget(f"{hk}", "domain") == page_url:
+                        redis.delete(f"{hk}")
+                        print(f"Cached value of the key:{hk} changed, key deleted!")
+
                 return jsonify({"msg": "success, data posted to db!"})
 
         except Exception as e:
@@ -171,11 +184,11 @@ class ListUsersSitesStatView(Resource):
     def get(self):
         try:
             user_identity = get_jwt_identity()
-            if redis.keys(f"{user_identity}"):
-                results = redis.json().get(f"{user_identity}", "$")
-                print("Loading data from cache!...")
-                return jsonify({"user": user_identity, "result": (results)})
 
+            if redis.keys(f"user:{user_identity}"):
+                results = redis.hget(f"user:{user_identity}", "results")
+                print("Getting data from cache!...")
+                return jsonify({"user": user_identity, "result": (results)})
             else:
                 cnx = init_connection_db()
                 cursor = cnx.cursor(dictionary=True)
@@ -189,8 +202,12 @@ class ListUsersSitesStatView(Resource):
                     (site_address,),
                 )
                 results = cursor.fetchall()
-                redis.json().set(user_identity, "$", results)
-                print("Data cached to redis!")
+
+                redis.hset(
+                    f"user:{user_identity}",
+                    mapping={"domain": f"{site_address}", "results": f"{results}"},
+                )
+                print("Saving data to cache!")
                 cnx.commit()
                 cursor.close()
                 cnx.close()
