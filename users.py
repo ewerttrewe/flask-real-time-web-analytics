@@ -24,7 +24,7 @@ from redis.exceptions import ConnectionError, TimeoutError
 from redis.retry import Retry
 from redis.backoff import ExponentialBackoff
 
-
+# connecting to redis
 redis = Redis(
     host=os.getenv("REDIS_HOST"),
     port=os.getenv("REDIS_PORT"),
@@ -33,21 +33,8 @@ redis = Redis(
     retry=Retry(ExponentialBackoff(cap=10, base=1), 25),
     retry_on_error=[ConnectionError, TimeoutError, ConnectionResetError],
 )
-
+# loading env variables
 load_dotenv()
-
-
-class HelloWorld(Resource):
-    def get(self):
-        try:
-            print(redis.ping())
-            redis.set("imie", "maciek")
-            print("success, redis connected!, random key created")
-        except Exception as e:
-            print(f"Error connecting to redis: {e}")
-
-        ki = redis.get("imie")
-        return "Welcome to this webapage!" + ki
 
 
 class CreateUserView(Resource):
