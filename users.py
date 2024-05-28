@@ -167,11 +167,17 @@ class CreateEntryView(Resource):
                 cursor.close()
                 cnx.close()
 
-                hashed_keys = redis.keys("*")
-                for hk in hashed_keys:
-                    if redis.hget(f"{hk}", "domain") == page_url:
-                        redis.delete(f"{hk}")
-                        print(f"Cached value of the key:{hk} changed, key deleted!")
+                # hashed_keys = redis.keys("*")
+                # for hk in hashed_keys:
+                #     if redis.hget(f"{hk}", "domain") == page_url:
+                #         redis.delete(f"{hk}")
+                #         print(f"Cached value of the key:{hk} changed, key deleted!")
+
+                hashed_keys = redis.keys("user:*")
+                for k in hashed_keys:
+                    if redis.json().get(f"{k}", "$")[0][1]["domain"] == page_url:
+                        redis.delete(f"{k}")
+                        print(f"Cached value of the key:{k} changed, key deleted!")
 
                 return jsonify({"msg": "success, data posted to db!"})
 
@@ -185,10 +191,19 @@ class ListUsersSitesStatView(Resource):
         try:
             user_identity = get_jwt_identity()
 
+            # if redis.keys(f"user:{user_identity}"):
+            #     results = redis.hget(f"user:{user_identity}", "results")
+            #     print("Getting data from cache!...")
+            #     return jsonify({"user": user_identity, "result": (results)})
+
             if redis.keys(f"user:{user_identity}"):
-                results = redis.hget(f"user:{user_identity}", "results")
-                print("Getting data from cache!...")
-                return jsonify({"user": user_identity, "result": (results)})
+                results = redis.json().get(f"user:{user_identity}", "$")[0][0][
+                    "results"
+                ]
+                # print(results)
+                print("Loading data from cache!")
+                return jsonify({"user": user_identity, "results": results})
+
             else:
                 cnx = init_connection_db()
                 cursor = cnx.cursor(dictionary=True)
@@ -202,16 +217,25 @@ class ListUsersSitesStatView(Resource):
                     (site_address,),
                 )
                 results = cursor.fetchall()
+                if not results:
+                    return jsonify(
+                        {"msg": "You have no entries on your site currently!"}
+                    )
+                # redis.hset(
+                #     f"user:{user_identity}",
+                #     mapping={"domain": f"{site_address}", "results": f"{results}"},
+                # )
 
-                redis.hset(
+                redis.json().set(
                     f"user:{user_identity}",
-                    mapping={"domain": f"{site_address}", "results": f"{results}"},
+                    "$",
+                    [{"results": results}, {"domain": site_address}],
                 )
                 print("Saving data to cache!")
                 cnx.commit()
                 cursor.close()
                 cnx.close()
 
-                return jsonify({"user": user_identity, "result": results})
+                return jsonify({"user": user_identity, "results": results})
         except Exception as e:
             return jsonify({"msg": "something went wrong!", "error": str(e)})
