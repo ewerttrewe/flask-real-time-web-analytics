@@ -1,4 +1,5 @@
-![Gitea Last Commit](https://img.shields.io/gitea/last-commit/ewerttrewe/https://github.com/ewerttrewe/flask-real-time-web-analytics/) [![Maintenance](https://img.shields.io/maintenance/no/2024)](https://img.shields.io/maintenance/no/2023?style=plastic)
+![Gitea Last Commit]([https://img.shields.io/gitea/last-commit/ewerttrewe/https://github.com/ewerttrewe/flask-real-time-web-analytics/](https://img.shields.io/badge/last%20commit-2023-red
+) [![Maintenance](https://img.shields.io/maintenance/no/2024)](https://img.shields.io/maintenance/no/2023?style=plastic)
 
 
 
