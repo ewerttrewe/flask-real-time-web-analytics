@@ -2,7 +2,9 @@
 
 
 
-> **Disclaimer:** Flask REST API that mimics the behaviour of real time web analytics services. It manages basic tracking data statistics for registered sites by registered users. It was a project in which i wanted to implement caching with Redis, so it was done for educational purposes only...MIT License
+> **Disclaimer:** Flask REST API that mimics the behaviour of real time web analytics services. It manages basic tracking data statistics for registered sites by registered users. It was a project in which i wanted to implement caching with Redis, so it was done for educational purposes only...
+
+MIT License
 
 Copyright (c) [year] [fullname]
 
